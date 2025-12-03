@@ -10,10 +10,10 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
 import NotFound from "./pages/NotFound/NotFound";
-import { SearchPage } from "./pages/SearchPage/SearchPage";
+// Removida importação do SearchPage se ela não for usada diretamente como rota independente fora do Dashboard
+// Se for usar dentro do Dashboard, o Dashboard que deve gerenciar.
 
 const ProtectedRoute = ({ children, user }) => {
-  // Se não tem usuário, vai pro login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -29,7 +29,8 @@ const AppRoutes = () => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
       } catch (e) {
         console.error("Erro ao parsear usuário", e);
         localStorage.removeItem("user");
@@ -40,6 +41,7 @@ const AppRoutes = () => {
 
   const handleLogin = (userData) => {
     setUser(userData);
+    // Navegação é feita dentro do componente Login, mas o estado atualiza aqui
   };
 
   const handleLogout = () => {
@@ -61,14 +63,16 @@ const AppRoutes = () => {
     <Dashboard onLogout={handleLogout} user={user} />
   );
 
-  const isRealUser = user && !user.isGuest;
+  // Verifica se existe QUALQUER usuário logado (Guest ou Real)
+  const isAuthenticated = !!user;
 
   return (
     <Routes>
+      {/* Redireciona raiz para Dashboard se logado, ou Login se não */}
       <Route
         path="/"
         element={
-          isRealUser ? (
+          isAuthenticated ? (
             <Navigate to="/dashboard" replace />
           ) : (
             <Navigate to="/login" replace />
@@ -76,10 +80,11 @@ const AppRoutes = () => {
         }
       />
 
+      {/* Rota de Login: Se já logado, manda pro Dashboard */}
       <Route
         path="/login"
         element={
-          isRealUser ? (
+          isAuthenticated ? (
             <Navigate to="/dashboard" replace />
           ) : (
             <Login onLogin={handleLogin} />
@@ -87,10 +92,11 @@ const AppRoutes = () => {
         }
       />
 
+      {/* Rota de Registro: Se já logado, manda pro Dashboard */}
       <Route
         path="/register"
         element={
-          isRealUser ? (
+          isAuthenticated ? (
             <Navigate to="/dashboard" replace />
           ) : (
             <Register onRegister={handleLogin} />
@@ -98,6 +104,8 @@ const AppRoutes = () => {
         }
       />
 
+      {/* Rotas Protegidas - Todas renderizam o Dashboard */}
+      {/* O Dashboard interno deve lidar com o conteúdo baseado na URL ou Abas */}
       <Route
         path="/dashboard/*"
         element={
@@ -106,6 +114,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/searchpage"
         element={
@@ -114,6 +123,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/binders/*"
         element={
@@ -122,6 +132,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/payments"
         element={
@@ -130,6 +141,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/section/*"
         element={
