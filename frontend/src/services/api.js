@@ -1,77 +1,72 @@
-import axios from "axios";
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-const API_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:3000"
-    : "https://i-collect-mongodb-backend.vercel.app";
+import authRoutes from "../routes/auth.js";
+import dashboardRoutes from "../routes/dashboard.js";
+import binderRoutes from "../routes/binders.js";
+import searchRoutes from "../routes/search.js";
+import paymentRoutes from "../routes/payments.js";
+import ratingRoutes from "../routes/ratings.js";
 
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+dotenv.config();
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+const app = express();
+
+app.use(
+  cors({
+    origin: [
+      "https://i-collect-mongodb.vercel.app",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) return;
+
+  if (!process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI não definida nas variáveis de ambiente!");
   }
-  return config;
+
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    isConnected = !!conn.connections[0].readyState;
+    console.log(`✅ MongoDB Conectado: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`❌ Erro MongoDB: ${error.message}`);
+  }
+};
+
+app.use(async (req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
+  await connectDB();
+  next();
 });
 
-export const authAPI = {
-  login: async (credentials) => {
-    const response = await api.post("/auth/login", credentials);
-    return response.data;
-  },
-  register: async (userData) => {
-    const response = await api.post("/auth/register", userData);
-    return response.data;
-  },
-};
+app.get("/", (req, res) => {
+  res.json({ message: "API i-collect rodando com MongoDB!" });
+});
 
-export const dashboardAPI = {
-  getDashboardData: async (userId) => {
-    const response = await api.get(`/dashboard/${userId}`);
-    return response.data;
-  },
-};
+app.use("/auth", authRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/binders", binderRoutes);
+app.use("/search", searchRoutes);
+app.use("/payments", paymentRoutes);
+app.use("/ratings", ratingRoutes);
 
-export const searchAPI = {
-  search: async (query) => {
-    const response = await api.get(`/search?q=${query}`);
-    return response.data;
-  },
-  getDetails: async (type, id) => {
-    const response = await api.get(`/search/details/${type}/${id}`);
-    return response.data;
-  },
-};
-
-export const bindersAPI = {
-  getBinders: async () => {
-    const response = await api.get("/binders");
-    return response.data;
-  },
-  // Adicione outras funções de binder conforme necessário
-};
-
-export const paymentsAPI = {
-  processPayments: async (paymentIds, method) => {
-    const response = await api.post("/payments/process", {
-      paymentIds,
-      method,
-    });
-    return response.data;
-  },
-};
-
-export const ratingsAPI = {
-  getTopRatings: async () => {
-    const response = await api.get("/ratings/top");
-    return response.data;
-  },
-};
-
-export default api;
+export default app;
