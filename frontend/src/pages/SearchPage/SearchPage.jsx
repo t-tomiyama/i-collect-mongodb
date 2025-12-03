@@ -19,7 +19,7 @@ import {
 } from "lucide-react"; // Adicionei ícones novos: Calendar, Tag, Globe
 import "./SearchPage.css";
 
-const API_URL = "https://i-collect-backend.onrender.com/api";
+const API_URL = "https://i-collect-mongodb-backend.vercel.app/api";
 
 const FILTERS = [
   { id: "photocards", name: "Photocards", icon: Package },
