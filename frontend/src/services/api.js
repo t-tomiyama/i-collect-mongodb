@@ -49,7 +49,7 @@ export const searchAPI = {
   },
 };
 
-export const binderAPI = {
+export const bindersAPI = {
   getBinders: async () => {
     const response = await api.get("/binders");
     return response.data;
