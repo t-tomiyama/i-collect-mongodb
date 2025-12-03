@@ -1,8 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://i-collect-backend.onrender.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -22,11 +20,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor para tratamento global de erros
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("API Error:", error.response?.data || error.message);
+
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403)
+    ) {
+      console.warn("Sessão expirada ou não autorizada.");
+    }
+
     return Promise.reject(error);
   }
 );
@@ -36,18 +41,23 @@ export const authAPI = {
     const response = await api.post("/auth/login", credentials);
     return response.data;
   },
+
   register: async (userData) => {
     const response = await api.post("/auth/register", userData);
     return response.data;
   },
+
   getSocialMedias: async () => {
+    // Retorna a lista estática ou do banco
     const response = await api.get("/auth/social-medias");
-    return response.data.data;
+    // Garante que retorna o array, independente se vier dentro de .data ou direto
+    return response.data.data || response.data;
   },
 };
 
 export const dashboardAPI = {
   getDashboardData: async (userId) => {
+    // userId pode ser o ID do Mongo (string) ou username, o backend trata ambos
     const response = await api.get(`/dashboard/${userId}`);
     return response.data;
   },
@@ -56,6 +66,7 @@ export const dashboardAPI = {
 export const searchAPI = {
   search: async (category, query, limit = 18) => {
     const endpoint = category === "global" ? "photocards" : category;
+
     const response = await api.get(`/search/${endpoint}`, {
       params: { q: query, limit },
     });
@@ -78,7 +89,7 @@ export const searchAPI = {
 
   getDetails: async (type, id) => {
     const response = await api.get(`/search/details/${type}/${id}`);
-    return response.data.data;
+    return response.data.data || response.data;
   },
 
   addToWishlist: async (data) => {
@@ -89,155 +100,77 @@ export const searchAPI = {
 
 export const bindersAPI = {
   getUserBinders: async (username, socialMediaId) => {
-    if (!username || !socialMediaId) {
-      console.error("Username ou socialMediaId faltando:", {
-        username,
-        socialMediaId,
-      });
-      throw new Error("Dados do usuário incompletos");
-    }
+    if (!username) throw new Error("Username faltando");
 
     try {
-      console.log("Buscando binders para:", username, socialMediaId);
       const response = await api.get(`/binders/${username}/${socialMediaId}`);
 
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data || [];
+      if (Array.isArray(response.data)) {
+        return response.data;
       }
-
-      return response.data || [];
+      return response.data.data || [];
     } catch (error) {
       console.error("Erro ao buscar binders:", error);
-
-      if (error.response?.status === 404) {
-        throw new Error("Usuário não encontrado para esta rede social");
-      }
-      if (error.response?.status === 400) {
-        throw new Error("Dados inválidos para buscar binders");
-      }
-
+      if (error.response?.status === 404) return [];
       throw error;
     }
   },
 
   getBinderDetails: async (username, socialMediaId, binderId) => {
-    if (!username || !socialMediaId || !binderId) {
-      console.error("Dados faltando para buscar binder:", {
-        username,
-        socialMediaId,
-        binderId,
-      });
-      return null;
-    }
+    if (!binderId) return null;
 
     try {
       const response = await api.get(
         `/binders/${username}/${socialMediaId}/${binderId}`
       );
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
+      // Retorna o objeto do binder direto ou encapsulado
+      return response.data.data || response.data;
     } catch (error) {
-      console.error("Erro ao buscar detalhes do binder:", error);
-
-      if (error.response?.status === 404) {
+      console.error("Erro detalhes binder:", error);
+      if (error.response?.status === 404)
         throw new Error("Binder não encontrado");
-      }
-
       throw error;
     }
   },
 
   getBinderStats: async (userId) => {
-    if (!userId) return null;
-
-    try {
-      const response = await api.get(`/binders/stats/${userId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error("Erro ao buscar estatísticas:", error);
-      return null;
-    }
+    return null;
   },
 
   getSleeveColors: async () => {
     try {
-      const response = await api.get("/binders/sleeve-colors");
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error("Erro ao buscar cores de sleeves:", error);
+      return [];
+    } catch {
       return [];
     }
   },
 
   createBinder: async (username, socialMediaId, binderData) => {
-    if (!username || !socialMediaId) {
-      throw new Error("Username e socialMediaId são obrigatórios");
-    }
+    const response = await api.post(
+      `/binders/${username}/${socialMediaId}`,
+      binderData
+    );
+    return response.data;
+  },
 
-    if (!binderData?.name || !binderData?.rows || !binderData?.columns) {
-      throw new Error("Nome, linhas e colunas são obrigatórios");
-    }
-
-    try {
-      console.log("Criando binder:", { username, socialMediaId, binderData });
-      const response = await api.post(
-        `/binders/${username}/${socialMediaId}`,
-        binderData
-      );
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data;
-      }
-
-      // Fallback
-      return {
-        success: true,
-        data: response.data,
-      };
-    } catch (error) {
-      console.error("Erro ao criar binder:", error);
-
-      // Tratamento específico de erros
-      if (error.response?.status === 400) {
-        const errorMsg = error.response.data?.error || "Erro ao criar binder";
-        throw new Error(errorMsg);
-      }
-
-      if (error.response?.status === 404) {
-        throw new Error("Usuário não encontrado para esta rede social");
-      }
-
-      throw error;
-    }
+  updateSlot: async (
+    username,
+    socialMediaId,
+    binderId,
+    pageNumber,
+    slotData
+  ) => {
+    const response = await api.put(
+      `/binders/${username}/${socialMediaId}/${binderId}/pages/${pageNumber}/slots`,
+      slotData
+    );
+    return response.data;
   },
 
   getUserSocialMedias: async (userId) => {
-    if (!userId) return [];
-
     try {
-      const response = await api.get(`/user/${userId}/social-medias`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data || [];
-    } catch (error) {
-      console.error("Erro ao buscar redes sociais do usuário:", error);
+      return [];
+    } catch {
       return [];
     }
   },
@@ -245,51 +178,17 @@ export const bindersAPI = {
 
 export const paymentsAPI = {
   processPayments: async (paymentIds, paymentMethod) => {
-    try {
-      const response = await api.post("/payments/process", {
-        paymentIds,
-        paymentMethod,
-      });
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error("Erro ao processar pagamentos:", error);
-      throw error;
-    }
+    const response = await api.post("/payments/process", {
+      paymentIds,
+      paymentMethod,
+    });
+    return response.data;
   },
 
   getPayments: async (userId) => {
-    try {
-      const response = await api.get(`/payments/${userId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error("Erro ao buscar pagamentos:", error);
-      throw error;
-    }
-  },
-
-  getPayments: async (userId) => {
-    try {
-      const response = await api.get(`/payments/${userId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error("Erro ao buscar pagamentos:", error);
-      throw error;
-    }
+    // Agora busca do endpoint /dashboard ou /payments específico
+    const response = await api.get(`/payments/${userId}`);
+    return response.data.data || response.data;
   },
 };
 
@@ -297,14 +196,8 @@ export const ratingsAPI = {
   getTopRatings: async () => {
     try {
       const response = await api.get("/ratings/top");
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
-      console.error("Erro ao buscar rankings:", error);
       return { topGoms: [], topCollectors: [] };
     }
   },
@@ -313,20 +206,9 @@ export const ratingsAPI = {
 export const debugAPI = {
   testConnection: async () => {
     try {
-      const response = await api.get("/health");
+      const response = await api.get("/"); // Rota raiz do backend
       return response.data;
     } catch (error) {
-      console.error("Erro de conexão com a API:", error);
-      throw error;
-    }
-  },
-
-  getUserInfo: async (userId) => {
-    try {
-      const response = await api.get(`/user/${userId}/info`);
-      return response.data;
-    } catch (error) {
-      console.error("Erro ao buscar info do usuário:", error);
       throw error;
     }
   },
