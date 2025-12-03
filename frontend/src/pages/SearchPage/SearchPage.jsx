@@ -16,10 +16,10 @@ import {
   Calendar,
   Tag,
   Globe,
-} from "lucide-react"; // Adicionei ícones novos: Calendar, Tag, Globe
+} from "lucide-react";
 import "./SearchPage.css";
 
-const API_URL = "https://i-collect-mongodb-backend.vercel.app/api";
+const API_URL = "https://i-collect-mongodb-backend.vercel.app/";
 
 const FILTERS = [
   { id: "photocards", name: "Photocards", icon: Package },
