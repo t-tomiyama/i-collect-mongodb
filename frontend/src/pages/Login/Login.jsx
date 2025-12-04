@@ -10,8 +10,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import "../../App.css";
-import { authAPI } from "../../services/api";
+import { authAPI } from "../../services/api"; // Importando a API configurada
 
+// Componente de Fundo Animado
 const PhotocardsBackground = () => {
   const HeartIcon = () => (
     <svg
@@ -81,18 +82,17 @@ const Login = ({ onLogin }) => {
       name: "Visitante",
       email: "guest@icollect.com",
       isGuest: true,
-      color: "#334155", // Cor padrão para convidado
     };
 
+    // Salva apenas o user mockado, sem token
     localStorage.setItem("user", JSON.stringify(guestUser));
-    localStorage.removeItem("authToken");
+    localStorage.removeItem("authToken"); // Garante que não tem token antigo
 
-    // Atualiza o estado global no App.jsx
     if (onLogin) onLogin(guestUser);
-
     navigate("/dashboard");
   };
 
+  // --- LOGIN REAL (COM TOKEN) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -102,26 +102,16 @@ const Login = ({ onLogin }) => {
       const data = await authAPI.login(formData);
 
       if (data.success) {
-        // Extrai token e dados do usuário da resposta
         const token = data.data.token;
-        const apiUser = data.data.user;
+        const user = { ...data.data.user, isGuest: false };
 
-        // Monta o objeto final do usuário
-        const userToSave = {
-          ...apiUser,
-          isGuest: false,
-        };
-
-        // 1. Salva no LocalStorage
         localStorage.setItem("authToken", token);
-        localStorage.setItem("user", JSON.stringify(userToSave));
+        localStorage.setItem("user", JSON.stringify(user));
 
-        // 2. Atualiza o estado no App.jsx
         if (onLogin) {
-          onLogin(userToSave);
+          onLogin(user);
         }
 
-        // 3. Redireciona
         navigate("/dashboard");
       } else {
         setError(data.message || data.error || "Falha ao fazer login");
