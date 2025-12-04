@@ -57,7 +57,7 @@ export const NAV_ITEMS = [
       { label: "Meus Binders", id: "my-binders", icon: BookOpen },
       { label: "Lista de Desejos", id: "col-wish", icon: Heart },
     ],
-  },*/,
+  },,
   {
     type: "category",
     icon: ShoppingBag,
@@ -69,7 +69,7 @@ export const NAV_ITEMS = [
       { label: "Pagamentos", id: "payments", icon: CreditCard },
       { label: "Todas as Compras", id: "haul-all", icon: Archive },
     ],
-  } /*
+  } 
   {
     type: "category",
     icon: Gift,
