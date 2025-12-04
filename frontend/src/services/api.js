@@ -79,11 +79,6 @@ export const searchAPI = {
     const response = await api.get(`/search/details/${type}/${id}`);
     return response.data.data;
   },
-
-  addToWishlist: async (data) => {
-    const response = await api.post("/search/wishlist/add", data);
-    return response.data;
-  },
 };
 
 export const bindersAPI = {
