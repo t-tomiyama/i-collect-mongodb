@@ -1,319 +1,156 @@
-import axios from "axios";
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-const API_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:3000"
-    : "https://i-collect-mongodb-backend.vercel.app";
+import authRoutes from "./routes/auth.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import binderRoutes from "./routes/binders.js";
+import searchRoutes from "./routes/search.js";
+import paymentRoutes from "./routes/payments.js";
+import ratingRoutes from "./routes/ratings.js";
 
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true,
+dotenv.config();
+
+const app = express();
+
+// FIXED CORS configuration
+app.options("*", cors()); // Handle preflight for all routes
+
+app.use(
+  cors({
+    origin: [
+      "https://i-collect-mongodb.vercel.app",
+      "https://i-collect-mongodb-backend.vercel.app",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  })
+);
+
+app.use(express.json());
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({
+    success: false,
+    error: "Internal server error",
+  });
 });
 
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) {
+    console.log("MongoDB already connected");
+    return;
   }
-);
 
-api.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    console.error("API Error:", error.response?.data || error.message);
+  try {
+    console.log("Connecting to MongoDB...");
+    console.log("MongoDB URI exists:", !!process.env.MONGODB_URI);
 
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI is not defined in environment variables");
     }
 
-    return Promise.reject(
-      error.response?.data || {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+
+    isConnected = !!conn.connections[0].readyState;
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`Database: ${conn.connection.name}`);
+  } catch (error) {
+    console.error(`❌ MongoDB Error: ${error.message}`);
+    console.error("Full error:", error);
+    // Don't throw here, let the app continue (for Vercel)
+  }
+};
+
+// Don't await here, just call it
+connectDB().catch(console.error);
+
+// Test endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "API i-collect rodando com MongoDB!",
+    timestamp: new Date().toISOString(),
+    mongoConnected: isConnected,
+  });
+});
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    mongo: isConnected ? "connected" : "disconnected",
+  });
+});
+
+// Debug endpoint
+app.get("/test-db", async (req, res) => {
+  try {
+    if (!isConnected) {
+      return res.status(503).json({
         success: false,
-        error: "Erro de conexão com o servidor",
-      }
-    );
+        error: "MongoDB not connected",
+        isConnected: false,
+      });
+    }
+
+    const collections = await mongoose.connection.db
+      .listCollections()
+      .toArray();
+    const users = await mongoose.connection.db
+      .collection("app_user")
+      .find({})
+      .limit(5)
+      .toArray();
+
+    res.json({
+      success: true,
+      connected: isConnected,
+      collections: collections.map((c) => c.name),
+      userCount: users.length,
+      sampleUsers: users.map((u) => ({
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        hasPassword: !!u.PASSWORD,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
   }
-);
+});
 
-export const authAPI = {
-  login: async (credentials) => {
-    try {
-      // Debug log
-      console.log("Login API call:", {
-        email: credentials.email,
-        endpoint: `${API_URL}/auth/login`,
-      });
+// Routes
+app.use("/auth", authRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/binders", binderRoutes);
+app.use("/search", searchRoutes);
+app.use("/payments", paymentRoutes);
+app.use("/ratings", ratingRoutes);
 
-      const response = await api.post("/auth/login", credentials);
-      return response;
-    } catch (error) {
-      console.error("Login API error:", error);
-      throw error;
-    }
-  },
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: "Endpoint not found",
+  });
+});
 
-  register: async (userData) => {
-    try {
-      console.log("Register API call:", {
-        username: userData.username,
-        endpoint: `${API_URL}/auth/register`,
-      });
-
-      const response = await api.post("/auth/register", userData);
-      return response;
-    } catch (error) {
-      console.error("Register API error:", error);
-      throw error;
-    }
-  },
-
-  getSocialMedias: async () => {
-    try {
-      const response = await api.get("/auth/social-medias");
-      return response;
-    } catch (error) {
-      console.error("Social medias API error:", error);
-      return {
-        success: true,
-        data: [
-          { id: 1, name: "Instagram" },
-          { id: 2, name: "Twitter/X" },
-          { id: 3, name: "Facebook" },
-          { id: 4, name: "TikTok" },
-        ],
-      };
-    }
-  },
-
-  debugUsers: async () => {
-    try {
-      const response = await api.get("/auth/debug/users");
-      return response;
-    } catch (error) {
-      console.error("Debug users error:", error);
-      throw error;
-    }
-  },
-};
-
-export const dashboardAPI = {
-  getDashboardData: async (userId) => {
-    try {
-      const response = await api.get(`/dashboard/${userId}`);
-      return response;
-    } catch (error) {
-      console.error("Dashboard API error:", error);
-      throw error;
-    }
-  },
-
-  getCollectorStats: async (collectorId) => {
-    try {
-      const response = await api.get(`/dashboard/collector/${collectorId}`);
-      return response;
-    } catch (error) {
-      console.error("Collector stats error:", error);
-      throw error;
-    }
-  },
-};
-
-export const searchAPI = {
-  search: async (query, type = "all") => {
-    try {
-      const response = await api.get(`/search?q=${query}&type=${type}`);
-      return response;
-    } catch (error) {
-      console.error("Search API error:", error);
-      throw error;
-    }
-  },
-
-  getDetails: async (type, id) => {
-    try {
-      const response = await api.get(`/search/details/${type}/${id}`);
-      return response;
-    } catch (error) {
-      console.error("Details API error:", error);
-      throw error;
-    }
-  },
-
-  getPhotocard: async (id) => {
-    try {
-      const response = await api.get(`/search/photocard/${id}`);
-      return response;
-    } catch (error) {
-      console.error("Photocard API error:", error);
-      throw error;
-    }
-  },
-};
-
-export const bindersAPI = {
-  // Get all binders for user
-  getBinders: async (userId) => {
-    try {
-      const response = await api.get(`/binders/user/${userId}`);
-      return response;
-    } catch (error) {
-      console.error("Get binders error:", error);
-      throw error;
-    }
-  },
-
-  createBinder: async (binderData) => {
-    try {
-      const response = await api.post("/binders", binderData);
-      return response;
-    } catch (error) {
-      console.error("Create binder error:", error);
-      throw error;
-    }
-  },
-
-  getBinder: async (binderId) => {
-    try {
-      const response = await api.get(`/binders/${binderId}`);
-      return response;
-    } catch (error) {
-      console.error("Get binder error:", error);
-      throw error;
-    }
-  },
-
-  updateBinder: async (binderId, binderData) => {
-    try {
-      const response = await api.put(`/binders/${binderId}`, binderData);
-      return response;
-    } catch (error) {
-      console.error("Update binder error:", error);
-      throw error;
-    }
-  },
-};
-
-export const photocardsAPI = {
-  getAllPhotocards: async (page = 1, limit = 20) => {
-    try {
-      const response = await api.get(`/photocards?page=${page}&limit=${limit}`);
-      return response;
-    } catch (error) {
-      console.error("Photocards API error:", error);
-      throw error;
-    }
-  },
-
-  getByArtist: async (artistId) => {
-    try {
-      const response = await api.get(`/photocards/artist/${artistId}`);
-      return response;
-    } catch (error) {
-      console.error("Artist photocards error:", error);
-      throw error;
-    }
-  },
-
-  getByRelease: async (releaseId) => {
-    try {
-      const response = await api.get(`/photocards/release/${releaseId}`);
-      return response;
-    } catch (error) {
-      console.error("Release photocards error:", error);
-      throw error;
-    }
-  },
-};
-
-export const paymentsAPI = {
-  processPayments: async (paymentIds, method) => {
-    try {
-      const response = await api.post("/payments/process", {
-        paymentIds,
-        method,
-      });
-      return response;
-    } catch (error) {
-      console.error("Payments API error:", error);
-      throw error;
-    }
-  },
-
-  getPaymentHistory: async (userId) => {
-    try {
-      const response = await api.get(`/payments/history/${userId}`);
-      return response;
-    } catch (error) {
-      console.error("Payment history error:", error);
-      throw error;
-    }
-  },
-};
-
-export const ratingsAPI = {
-  getTopRatings: async (limit = 10) => {
-    try {
-      const response = await api.get(`/ratings/top?limit=${limit}`);
-      return response;
-    } catch (error) {
-      console.error("Ratings API error:", error);
-      throw error;
-    }
-  },
-
-  submitRating: async (ratingData) => {
-    try {
-      const response = await api.post("/ratings", ratingData);
-      return response;
-    } catch (error) {
-      console.error("Submit rating error:", error);
-      throw error;
-    }
-  },
-
-  getCollectorRatings: async (collectorId) => {
-    try {
-      const response = await api.get(`/ratings/collector/${collectorId}`);
-      return response;
-    } catch (error) {
-      console.error("Collector ratings error:", error);
-      throw error;
-    }
-  },
-};
-
-export const apiUtils = {
-  checkHealth: async () => {
-    try {
-      const response = await api.get("/");
-      return response;
-    } catch (error) {
-      console.error("Health check error:", error);
-      return { success: false, error: "API offline" };
-    }
-  },
-
-  testConnection: async () => {
-    try {
-      const response = await api.get("/test-db");
-      return response;
-    } catch (error) {
-      console.error("DB test error:", error);
-      return { success: false, error: "Database connection failed" };
-    }
-  },
-};
-
-export default api;
+export default app;
