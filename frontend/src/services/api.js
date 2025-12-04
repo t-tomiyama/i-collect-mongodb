@@ -78,12 +78,152 @@ export const bindersAPI = {
 };
 
 export const paymentsAPI = {
+  // Buscar TODOS os pagamentos
+  getPayments: async (userId, filters = {}) => {
+    try {
+      const {
+        status,
+        page = 1,
+        limit = 20,
+        sortBy = "due_date",
+        sortOrder = "asc",
+      } = filters;
+
+      let url = `${API_BASE_URL}/payments/${userId}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+
+      if (status && status !== "todos") {
+        url += `&status=${status}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      throw error;
+    }
+  },
+
+  // Buscar histórico de pagamentos
+  getPaymentHistory: async (userId, filters = {}) => {
+    try {
+      const {
+        startDate,
+        endDate,
+        page = 1,
+        limit = 20,
+        status = "pago",
+      } = filters;
+
+      let url = `${API_BASE_URL}/payments/${userId}/history?page=${page}&limit=${limit}&status=${status}`;
+
+      if (startDate) {
+        url += `&startDate=${startDate}`;
+      }
+      if (endDate) {
+        url += `&endDate=${endDate}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      throw error;
+    }
+  },
+
+  // Marcar pagamento como pago
+  markAsPaid: async (paymentId, paymentData) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/payments/${paymentId}/pay`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(paymentData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error marking payment as paid:", error);
+      throw error;
+    }
+  },
+
+  // Buscar detalhes de um pagamento específico
+  getPaymentDetail: async (paymentId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/payments/detail/${paymentId}`
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching payment detail:", error);
+      throw error;
+    }
+  },
+
+  // Cancelar pagamento
+  cancelPayment: async (paymentId, reason) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/payments/${paymentId}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error cancelling payment:", error);
+      throw error;
+    }
+  },
+
+  // Processar múltiplos pagamentos (nova função)
   processPayments: async (paymentIds, method) => {
-    const response = await api.post("/payments/process", {
-      paymentIds,
-      method,
-    });
-    return response.data;
+    try {
+      // Processa cada pagamento individualmente
+      const results = await Promise.all(
+        paymentIds.map(async (paymentId) => {
+          const result = await paymentsAPI.markAsPaid(paymentId, {
+            method,
+            amount: null, // O backend calculará automaticamente
+            notes: "Pagamento em lote via interface",
+          });
+          return { id: paymentId, success: result.success };
+        })
+      );
+
+      return {
+        success: results.every((r) => r.success),
+        results,
+      };
+    } catch (error) {
+      console.error("Error processing payments:", error);
+      throw error;
+    }
   },
 };
 
