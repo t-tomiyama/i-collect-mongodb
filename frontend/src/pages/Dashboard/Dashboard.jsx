@@ -350,22 +350,28 @@ const DashboardHome = ({
 
     try {
       setProcessingPayment(true);
-      await paymentsAPI.processPayments(selectedPayments, method);
-
-      alert(
-        `Pagamento de ${selectedPayments.length} item(s) realizado com sucesso via ${method}!`
+      const result = await paymentsAPI.processPayments(
+        selectedPayments,
+        method
       );
-      setSelectedPayments([]);
-      setIsModalOpen(false);
-      onRefreshData();
+
+      if (result.success) {
+        alert(result.message || "Pagamento processado com sucesso!");
+        setSelectedPayments([]);
+        setIsModalOpen(false);
+        onRefreshData();
+      } else {
+        alert(
+          `Erro: ${result.error || "Não foi possível processar o pagamento"}`
+        );
+      }
     } catch (error) {
       console.error("Erro ao processar pagamentos:", error);
-      alert("Erro ao processar pagamentos. Tente novamente.");
+      alert(`Erro: ${error.message || "Tente novamente."}`);
     } finally {
       setProcessingPayment(false);
     }
   };
-
   const calculateTotalPayments = () => {
     const total = pendingPayments.reduce(
       (sum, payment) => sum + payment.amount,
