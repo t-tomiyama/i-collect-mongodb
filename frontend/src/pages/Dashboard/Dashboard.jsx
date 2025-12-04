@@ -539,12 +539,8 @@ const DashboardHome = ({
                     </>
                   ) : (
                     <>
-                      Sua coleção tem
-                      <span className="welcome-banner__highlight">
-                        {" "}
-                        {stats.totalPhotocards || 0} photocards{" "}
-                      </span>
-                      organizados.
+                      Realize seus <strong> pagamentos pendentes </strong> na
+                      tabela abaixo.
                     </>
                   )}
                 </p>
@@ -868,15 +864,6 @@ const DashboardHome = ({
                   )}
                 </tbody>
               </table>
-            </div>
-
-            <div className="payment-schedule__footer">
-              <button
-                className="btn btn-secondary"
-                onClick={() => navigate("/payments")}
-              >
-                Ver Todos os Pagamentos
-              </button>
             </div>
           </div>
         )}
