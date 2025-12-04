@@ -836,6 +836,15 @@ const DashboardHome = ({
                 </tbody>
               </table>
             </div>
+
+            <div className="payment-schedule__footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => navigate("/payments")}
+              >
+                Ver Todos os Pagamentos
+              </button>
+            </div>
           </div>
         )}
 
