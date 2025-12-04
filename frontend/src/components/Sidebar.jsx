@@ -37,7 +37,7 @@ export const NAV_ITEMS = [
       { label: "Releases", id: "releases", icon: Disc },
       { label: "Photocards", id: "pcs", icon: Image },*/
     ],
-  } /*
+  },
   {
     type: "category",
     icon: Users,
@@ -57,7 +57,7 @@ export const NAV_ITEMS = [
       { label: "Meus Binders", id: "my-binders", icon: BookOpen },
       { label: "Lista de Desejos", id: "col-wish", icon: Heart },
     ],
-  },*/,
+  },
   {
     type: "category",
     icon: ShoppingBag,
@@ -69,7 +69,7 @@ export const NAV_ITEMS = [
       { label: "Pagamentos", id: "payments", icon: CreditCard },
       { label: "Todas as Compras", id: "haul-all", icon: Archive },
     ],
-  } /*
+  },
   {
     type: "category",
     icon: Gift,
@@ -79,7 +79,7 @@ export const NAV_ITEMS = [
       { label: "Vendas Ativas", id: "sales-active", icon: Tag },
       { label: "Todas as Vendas", id: "sales-all", icon: Archive },
     ],
-  }, */,
+  },
   { type: "link", icon: Settings, label: "Configurações", id: "settings" },
 ];
 
