@@ -559,30 +559,6 @@ const DashboardHome = ({
                 {user && !user.isGuest ? (
                   <>
                     <button
-                      className="btn btn-primary"
-                      onClick={() => navigate("/searchpage")}
-                      disabled
-                    >
-                      <Plus size={18} />
-                      Adicionar Photocard
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => setActiveNav("my-binders")}
-                      disabled
-                    >
-                      <BookOpen size={18} />
-                      Adicionar Binder
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => navigate("/searchpage?type=purchase")}
-                      disabled
-                    >
-                      <ShoppingCart size={18} />
-                      Adicionar Compra
-                    </button>
-                    <button
                       className="btn btn-secondary"
                       onClick={onRefreshData}
                       disabled={loading}
