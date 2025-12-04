@@ -940,11 +940,6 @@ function Dashboard({ onLogout, user }) {
   useEffect(() => {
     loadDashboardData();
   }, [user]);
-  useEffect(() => {
-    if (user) {
-      setShowNotifications(true);
-    }
-  }, [user]);
 
   const getActiveNavFromPath = () => {
     const path = location.pathname;
