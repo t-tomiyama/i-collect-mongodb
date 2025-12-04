@@ -1,23 +1,18 @@
 import axios from "axios";
 
-// Define a URL base:
-// Se estiver rodando local (npm run dev), usa localhost:3000
-// Se estiver na Vercel (production), usa a URL do seu backend
 const API_URL =
   import.meta.env.MODE === "development"
     ? "http://localhost:3000"
     : "https://i-collect-mongodb-backend.vercel.app";
 
-// Cria a instância do Axios
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
-// Interceptor: Adiciona o Token automaticamente em todas as requisições
-// Isso evita que você tenha que enviar o header Authorization manualmente toda vez
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
@@ -31,20 +26,15 @@ api.interceptors.request.use(
   }
 );
 
-// --- Definição das Chamadas da API ---
-
 export const authAPI = {
   login: async (credentials) => {
-    // credentials = { email, password }
     const response = await api.post("/auth/login", credentials);
     return response.data;
   },
   register: async (userData) => {
-    // userData = { name, email, password, username, ... }
     const response = await api.post("/auth/register", userData);
     return response.data;
   },
-  // Opcional: Se você tiver rota para pegar redes sociais no cadastro
   getSocialMedias: async () => {
     const response = await api.get("/auth/social-medias");
     return response.data;
@@ -60,12 +50,10 @@ export const dashboardAPI = {
 
 export const searchAPI = {
   search: async (query) => {
-    // Ex: /search?q=Stray Kids
     const response = await api.get(`/search?q=${query}`);
     return response.data;
   },
   getDetails: async (type, id) => {
-    // Ex: /search/details/photocard/123
     const response = await api.get(`/search/details/${type}/${id}`);
     return response.data;
   },
@@ -80,7 +68,6 @@ export const bindersAPI = {
     const response = await api.post("/binders", binderData);
     return response.data;
   },
-  // Adicione outras funções de binder (delete, update) se precisar
 };
 
 export const paymentsAPI = {
