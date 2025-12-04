@@ -16,10 +16,10 @@ import {
   Calendar,
   Tag,
   Globe,
-} from "lucide-react"; // Adicionei ícones novos: Calendar, Tag, Globe
+} from "lucide-react";
 import "./SearchPage.css";
 
-const API_URL = "https://i-collect-backend.onrender.com/api";
+const API_URL = "https://i-collect-mongodb-backend.vercel.app";
 
 const FILTERS = [
   { id: "photocards", name: "Photocards", icon: Package },
@@ -265,8 +265,7 @@ export const SearchPage = ({ initialQuery = "", initialSection = null }) => {
     setModalType(type);
     setModalData(null);
     try {
-      // Aqui removemos o 's' final do tipo se necessário para bater com o backend (se lá estiver singular)
-      // Mas baseado no seu código backend, ele aceita plural também.
+      // Usa a URL correta sem barra dupla
       const response = await fetch(`${API_URL}/search/details/${type}/${id}`);
       const json = await response.json();
       if (json.success) setModalData(json.data);
