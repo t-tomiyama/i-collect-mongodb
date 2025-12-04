@@ -25,20 +25,15 @@ api.interceptors.request.use(
   }
 );
 
-// --- Definição das Chamadas da API ---
-
 export const authAPI = {
   login: async (credentials) => {
-    // credentials = { email, password }
     const response = await api.post("/auth/login", credentials);
     return response.data;
   },
   register: async (userData) => {
-    // userData = { name, email, password, username, ... }
     const response = await api.post("/auth/register", userData);
     return response.data;
   },
-  // Opcional: Se você tiver rota para pegar redes sociais no cadastro
   getSocialMedias: async () => {
     const response = await api.get("/auth/social-medias");
     return response.data;
@@ -89,43 +84,20 @@ export const searchAPI = {
 export const bindersAPI = {
   getUserBinders: async (username, socialMediaId) => {
     if (!username || !socialMediaId) {
-      console.error("Username ou socialMediaId faltando:", {
-        username,
-        socialMediaId,
-      });
       throw new Error("Dados do usuário incompletos");
     }
 
     try {
-      console.log("Buscando binders para:", username, socialMediaId);
       const response = await api.get(`/binders/${username}/${socialMediaId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data || [];
-      }
-
-      return response.data || [];
+      return response.data.data || [];
     } catch (error) {
       console.error("Erro ao buscar binders:", error);
-
-      if (error.response?.status === 404) {
-        throw new Error("Usuário não encontrado para esta rede social");
-      }
-      if (error.response?.status === 400) {
-        throw new Error("Dados inválidos para buscar binders");
-      }
-
       throw error;
     }
   },
 
   getBinderDetails: async (username, socialMediaId, binderId) => {
     if (!username || !socialMediaId || !binderId) {
-      console.error("Dados faltando para buscar binder:", {
-        username,
-        socialMediaId,
-        binderId,
-      });
       return null;
     }
 
@@ -133,34 +105,18 @@ export const bindersAPI = {
       const response = await api.get(
         `/binders/${username}/${socialMediaId}/${binderId}`
       );
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error("Erro ao buscar detalhes do binder:", error);
-
-      if (error.response?.status === 404) {
-        throw new Error("Binder não encontrado");
-      }
-
       throw error;
     }
   },
 
   getBinderStats: async (userId) => {
     if (!userId) return null;
-
     try {
       const response = await api.get(`/binders/stats/${userId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error);
       return null;
@@ -170,12 +126,7 @@ export const bindersAPI = {
   getSleeveColors: async () => {
     try {
       const response = await api.get("/binders/sleeve-colors");
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
       console.error("Erro ao buscar cores de sleeves:", error);
       return [];
@@ -192,49 +143,22 @@ export const bindersAPI = {
     }
 
     try {
-      console.log("Criando binder:", { username, socialMediaId, binderData });
       const response = await api.post(
         `/binders/${username}/${socialMediaId}`,
         binderData
       );
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data;
-      }
-
-      // Fallback
-      return {
-        success: true,
-        data: response.data,
-      };
+      return response.data;
     } catch (error) {
       console.error("Erro ao criar binder:", error);
-
-      // Tratamento específico de erros
-      if (error.response?.status === 400) {
-        const errorMsg = error.response.data?.error || "Erro ao criar binder";
-        throw new Error(errorMsg);
-      }
-
-      if (error.response?.status === 404) {
-        throw new Error("Usuário não encontrado para esta rede social");
-      }
-
       throw error;
     }
   },
 
   getUserSocialMedias: async (userId) => {
     if (!userId) return [];
-
     try {
       const response = await api.get(`/user/${userId}/social-medias`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
-      return response.data || [];
+      return response.data.data || [];
     } catch (error) {
       console.error("Erro ao buscar redes sociais do usuário:", error);
       return [];
@@ -249,26 +173,21 @@ export const paymentsAPI = {
         paymentIds,
         paymentMethod,
       });
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data;
-      }
-
       return response.data;
     } catch (error) {
-      console.error("Erro ao processar pagamentos:", error);
-      throw error;
+      console.error(
+        "Erro ao processar pagamentos:",
+        error.response?.data || error.message
+      );
+      throw new Error(
+        error.response?.data?.error || "Erro ao processar pagamentos"
+      );
     }
   },
 
-  getPayments: async (userId) => {
+  getPayments: async (userId, params = {}) => {
     try {
-      const response = await api.get(`/payments/${userId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
+      const response = await api.get(`/payments/${userId}`, { params });
       return response.data;
     } catch (error) {
       console.error("Erro ao buscar pagamentos:", error);
@@ -276,17 +195,44 @@ export const paymentsAPI = {
     }
   },
 
-  getPayments: async (userId) => {
+  getPaymentHistory: async (userId, params = {}) => {
     try {
-      const response = await api.get(`/payments/${userId}`);
-
-      if (response.data && response.data.success !== undefined) {
-        return response.data.data;
-      }
-
+      const response = await api.get(`/payments/${userId}/history`, { params });
       return response.data;
     } catch (error) {
-      console.error("Erro ao buscar pagamentos:", error);
+      console.error("Erro ao buscar histórico:", error);
+      throw error;
+    }
+  },
+
+  getPaymentDetail: async (paymentId) => {
+    try {
+      const response = await api.get(`/payments/detail/${paymentId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao buscar detalhes:", error);
+      throw error;
+    }
+  },
+
+  markAsPaid: async (paymentId, data) => {
+    try {
+      const response = await api.post(`/payments/${paymentId}/pay`, data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao marcar como pago:", error);
+      throw error;
+    }
+  },
+
+  cancelPayment: async (paymentId, reason) => {
+    try {
+      const response = await api.post(`/payments/${paymentId}/cancel`, {
+        reason,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao cancelar:", error);
       throw error;
     }
   },
