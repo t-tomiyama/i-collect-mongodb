@@ -12,6 +12,7 @@ import {
 import "../../App.css";
 import { authAPI } from "../../services/api";
 
+// ... (Mantenha o componente PhotocardsBackground igual ao seu código original) ...
 const PhotocardsBackground = () => {
   const HeartIcon = () => (
     <svg

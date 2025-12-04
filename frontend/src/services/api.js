@@ -74,7 +74,7 @@ export const bindersAPI = {
     const response = await api.post("/binders", binderData);
     return response.data;
   },
-  r,
+  // Adicione outras funções de binder (delete, update) se precisar
 };
 
 export const paymentsAPI = {
