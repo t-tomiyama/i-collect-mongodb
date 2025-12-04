@@ -103,6 +103,14 @@ const THEMES = {
   gray: { name: "Cinza" },
 };
 
+// Função de segurança para valores numéricos
+const safeAmount = (amount) => {
+  if (amount === null || amount === undefined || isNaN(amount)) {
+    return 0;
+  }
+  return Number(amount);
+};
+
 const getSellerLabel = (payment) => {
   if (payment.gom_names) {
     return Array.isArray(payment.gom_names)
@@ -119,9 +127,13 @@ const PaymentModal = ({ isVisible, onClose, payments, onPaymentSubmit }) => {
 
   if (!isVisible) return null;
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalAmount = payments.reduce(
+    (sum, p) => sum + safeAmount(p.amount),
+    0
+  );
   const totalLateFees = payments.reduce(
-    (sum, p) => (p.status === "atrasado" ? sum + (p.late_fee || 0) : sum),
+    (sum, p) =>
+      p.status === "atrasado" ? sum + safeAmount(p.late_fee || 0) : sum,
     0
   );
 
@@ -155,14 +167,19 @@ const PaymentModal = ({ isVisible, onClose, payments, onPaymentSubmit }) => {
         <p className="payment-modal__subtitle">
           Você está prestes a pagar <strong>{payments.length} item(s)</strong>,
           totalizando{" "}
-          <strong>R${totalAmount.toFixed(2).replace(".", ",")}</strong>.
+          <strong>
+            R${safeAmount(totalAmount).toFixed(2).replace(".", ",")}
+          </strong>
+          .
         </p>
 
         <div className="payment-modal__groups">
           {Object.entries(groupedPayments).map(([seller, items]) => {
             const sellerLateFees = items.reduce(
               (sum, item) =>
-                item.status === "atrasado" ? sum + (item.late_fee || 0) : sum,
+                item.status === "atrasado"
+                  ? sum + safeAmount(item.late_fee || 0)
+                  : sum,
               0
             );
 
@@ -187,15 +204,17 @@ const PaymentModal = ({ isVisible, onClose, payments, onPaymentSubmit }) => {
                         </span>
                         <span className={`item-status status-${item.status}`}>
                           {item.status}
-                          {item.status === "atrasado" && item.late_fee > 0 && (
-                            <span className="late-fee-small">
-                              (+R$ {item.late_fee.toFixed(2)})
-                            </span>
-                          )}
+                          {item.status === "atrasado" &&
+                            safeAmount(item.late_fee) > 0 && (
+                              <span className="late-fee-small">
+                                (+R$ {safeAmount(item.late_fee).toFixed(2)})
+                              </span>
+                            )}
                         </span>
                       </div>
                       <span className="item-amount font-bold">
-                        R$ {item.amount.toFixed(2).replace(".", ",")}
+                        R${" "}
+                        {safeAmount(item.amount).toFixed(2).replace(".", ",")}
                       </span>
                     </li>
                   ))}
@@ -250,7 +269,7 @@ const PaymentModal = ({ isVisible, onClose, payments, onPaymentSubmit }) => {
             onClick={() => onPaymentSubmit(selectedMethod)}
           >
             Pagar com {selectedMethod} (R${" "}
-            {totalAmount.toFixed(2).replace(".", ",")})
+            {safeAmount(totalAmount).toFixed(2).replace(".", ",")})
           </button>
         </div>
       </div>
@@ -372,9 +391,10 @@ const DashboardHome = ({
       setProcessingPayment(false);
     }
   };
+
   const calculateTotalPayments = () => {
     const total = pendingPayments.reduce(
-      (sum, payment) => sum + payment.amount,
+      (sum, payment) => sum + safeAmount(payment.amount),
       0
     );
     return `R$${total.toFixed(2).replace(".", ",")}`;
@@ -383,7 +403,9 @@ const DashboardHome = ({
   const calculateTotalLateFees = () => {
     return pendingPayments.reduce(
       (sum, payment) =>
-        payment.status === "atrasado" ? sum + (payment.late_fee || 0) : sum,
+        payment.status === "atrasado"
+          ? sum + safeAmount(payment.late_fee || 0)
+          : sum,
       0
     );
   };
@@ -436,6 +458,7 @@ const DashboardHome = ({
   const getSellerLabel = (payment) => {
     return payment.seller || payment.seller_username || "Desconhecido";
   };
+
   const groupedPaymentsBySeller = pendingPayments.reduce((acc, pay) => {
     const sellerLabel = getSellerLabel(pay);
     if (!acc[sellerLabel]) {
@@ -735,7 +758,9 @@ const DashboardHome = ({
                                 itens)
                                 <span className="seller-late-fee">
                                   Taxa de atraso: R${" "}
-                                  {payments[0]?.late_fee?.toFixed(2) || "0.00"}{" "}
+                                  {safeAmount(payments[0]?.late_fee).toFixed(
+                                    2
+                                  ) || "0.00"}{" "}
                                   por item
                                 </span>
                               </span>
@@ -811,7 +836,10 @@ const DashboardHome = ({
                             </td>
                             <td className="hidden-md">{getSellerLabel(pay)}</td>
                             <td className="font-bold">
-                              R$ {pay.amount.toFixed(2).replace(".", ",")}
+                              R${" "}
+                              {safeAmount(pay.amount)
+                                .toFixed(2)
+                                .replace(".", ",")}
                             </td>
                             <td className="font-medium">
                               {formatDisplayDate(pay.due_date)}
@@ -825,9 +853,10 @@ const DashboardHome = ({
                                 {getStatusIcon(pay.status)}
                                 {pay.status}
                                 {pay.status === "atrasado" &&
-                                  pay.late_fee > 0 && (
+                                  safeAmount(pay.late_fee) > 0 && (
                                     <span className="late-fee-badge-small">
-                                      (+R$ {pay.late_fee.toFixed(2)})
+                                      (+R$ {safeAmount(pay.late_fee).toFixed(2)}
+                                      )
                                     </span>
                                   )}
                               </span>
