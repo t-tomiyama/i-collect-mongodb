@@ -247,7 +247,7 @@ export function Header({
                 <>
                   <button className="user-menu__item">Seu Perfil</button>
                   <button className="user-menu__item">Configurações</button>
-                  <div className="user-menu__divider"></div>
+                  <div className="user-menu__divider"></div> */
                   <button
                     className="user-menu__item user-menu__item--danger"
                     onClick={onLogout}
