@@ -1,17 +1,23 @@
+// services/api.js - Verifique se está completo
 import axios from "axios";
 
+// Configuração base da API
 const API_URL =
   import.meta.env.MODE === "development"
     ? "http://localhost:3000"
     : "https://i-collect-mongodb-backend.vercel.app";
+
+console.log("API_URL configurada para:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // Adicione timeout
 });
 
+// Interceptor para adicionar token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
@@ -25,20 +31,29 @@ api.interceptors.request.use(
   }
 );
 
-// --- Definição das Chamadas da API ---
+// Interceptor para tratamento de erros
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
 
+// --- Definição das Chamadas da API ---
 export const authAPI = {
   login: async (credentials) => {
-    // credentials = { email, password }
     const response = await api.post("/auth/login", credentials);
     return response.data;
   },
   register: async (userData) => {
-    // userData = { name, email, password, username, ... }
     const response = await api.post("/auth/register", userData);
     return response.data;
   },
-  // Opcional: Se você tiver rota para pegar redes sociais no cadastro
   getSocialMedias: async () => {
     const response = await api.get("/auth/social-medias");
     return response.data;
@@ -54,12 +69,10 @@ export const dashboardAPI = {
 
 export const searchAPI = {
   search: async (query) => {
-    // Ex: /search?q=Stray Kids
-    const response = await api.get(`/search?q=${query}`);
+    const response = await api.get(`/search?q=${encodeURIComponent(query)}`);
     return response.data;
   },
   getDetails: async (type, id) => {
-    // Ex: /search/details/photocard/123
     const response = await api.get(`/search/details/${type}/${id}`);
     return response.data;
   },
@@ -84,23 +97,35 @@ export const paymentsAPI = {
     });
     return response.data;
   },
-
-  // Adicione esta função nova
   getAllPayments: async (userId) => {
-    const response = await api.get(`/payments/all/${userId}`);
-    return response.data;
+    try {
+      const response = await api.get(`/payments/all/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao buscar todos os pagamentos:", error);
+      throw error;
+    }
   },
-
-  // OU use a rota existente mas com um parâmetro diferente
-  getPayments: async (userId, status = "all") => {
-    const response = await api.get(`/payments/${userId}?status=${status}`);
-    return response.data;
+  getPayments: async (userId) => {
+    try {
+      const response = await api.get(`/payments/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao buscar pagamentos:", error);
+      throw error;
+    }
   },
 };
+
 export const ratingsAPI = {
   getTopRatings: async () => {
-    const response = await api.get("/ratings/top");
-    return response.data;
+    try {
+      const response = await api.get("/ratings/top");
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao buscar ratings:", error);
+      return { topGoms: [], topCollectors: [] };
+    }
   },
 };
 
